@@ -10,6 +10,72 @@
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"
             integrity="sha256-2Pmvv0kuTBOenSvLm6bvfBSSHrUJ+3A7x6P5Ebd07/g=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.5/dist/js.cookie.min.js"></script>
+
+    <script src="https://developers.kakao.com/sdk/js/kakao.js"></script>
+    <script>
+        Kakao.init('f3f1695a75d8b443e7c14b45db4d8d59');
+
+        $(document).ready(function () {
+            // 토큰 삭제
+            Cookies.remove('Authorization', {path: '/'});
+        });
+
+        const host = 'http://' + window.location.host;
+
+        const href = location.href;
+        const queryString = href.substring(href.indexOf("?")+1)
+        if (queryString === 'error') {
+            const errorDiv = document.getElementById('login-failed');
+            errorDiv.style.display = 'block';
+        }
+
+        function onLogin() {
+            let username = $('#username').val();
+            let password = $('#password').val();
+
+            $.ajax({
+                type: "POST",
+                url: `/api/user/login`,
+                contentType: "application/json",
+                data: JSON.stringify({username: username, password: password}),
+            })
+                .done(function (res, status, xhr) {
+                    window.location.href = host;
+                })
+                .fail(function (xhr, textStatus, errorThrown) {
+                    console.log('statusCode: ' + xhr.status);
+                    window.location.href = host + '/api/user/login-page?error'
+                });
+        }
+
+        // 카카오 로그인 함수
+        function loginWithKakao() {
+            Kakao.Auth.login({
+                success: function (authObj) {
+                    // 로그인 성공 시 카카오에서 전달받은 토큰을 서버로 전송하여 처리
+                    $.ajax({
+                        type: "POST",
+                        url: `/api/auth/login/kakao`,
+                        contentType: "application/json",
+                        data: JSON.stringify({ accessToken: authObj.access_token }),
+                    })
+                        .done(function (res, status, xhr) {
+                            // 카카오 로그인이 성공하면 홈페이지로 이동
+                            window.location.href = 'index';
+                        })
+                        .fail(function (xhr, textStatus, errorThrown) {
+                            console.log('statusCode: ' + xhr.status);
+                            alert('카카오 로그인 실패');
+                            // window.location.href = host + '/api/user/login-page?error';
+                        });
+                },
+                fail: function (err) {
+                    console.log('카카오 로그인 실패', err);
+                },
+            });
+        }
+
+    </script>
     <meta charset="UTF-8">
     <title>로그인 페이지</title>
 </head>
@@ -21,6 +87,12 @@
     <button id="login-id-btn" onclick="location.href='/api/user/signup'">
         회원 가입하기
     </button>
+
+    <!-- 카카오 로그인 버튼 -->
+    <button id="login-kakao-btn" onclick="loginWithKakao()">
+        카카오로 로그인
+    </button>
+
     <div>
         <div class="login-id-label">아이디</div>
         <input type="text" name="username" id="username" class="login-input-box">
@@ -29,42 +101,10 @@
         <input type="password" name="password" id="password" class="login-input-box">
 
         <button id="login-id-submit" onclick="onLogin()">로그인</button>
+
     </div>
     <div id="login-failed" style="display: none" class="alert alert-danger" role="alert">로그인에 실패하였습니다.</div>
 </div>
 </body>
-<script>
-    $(document).ready(function () {
-        // 토큰 삭제
-        Cookies.remove('Authorization', {path: '/'});
-    });
 
-    const host = 'http://' + window.location.host;
-
-    const href = location.href;
-    const queryString = href.substring(href.indexOf("?")+1)
-    if (queryString === 'error') {
-        const errorDiv = document.getElementById('login-failed');
-        errorDiv.style.display = 'block';
-    }
-
-    function onLogin() {
-        let username = $('#username').val();
-        let password = $('#password').val();
-
-        $.ajax({
-            type: "POST",
-            url: `/api/user/login`,
-            contentType: "application/json",
-            data: JSON.stringify({username: username, password: password}),
-        })
-            .done(function (res, status, xhr) {
-                window.location.href = host;
-            })
-            .fail(function (xhr, textStatus, errorThrown) {
-                console.log('statusCode: ' + xhr.status);
-                window.location.href = host + '/api/user/login-page?error'
-            });
-    }
-</script>
 </html>
